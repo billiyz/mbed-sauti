@@ -22,7 +22,7 @@ The SD card is connected as follows
 
 #### PWM Signal Recording
 When recording the PWM signal, we connect the PWM output signal D5 (PB_4) to the analog input A1.
-
+We create a 50% duty cycle signal at 200Hz. This is sampled at 8kHz and saved to a file *audio_test.wav*.
 
 #### Microphone
 ## Software
