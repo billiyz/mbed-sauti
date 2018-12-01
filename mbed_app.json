@@ -1,0 +1,12 @@
+{
+    "target_overrides": {
+        "NUCLEO_F446RE": {
+            "platform.stdio-convert-newlines": true,
+	    "target.components_add": ["SD"],
+	    "sd.SPI_CS": "D10",
+            "sd.SPI_MOSI": "D11",
+            "sd.SPI_MISO": "D12",
+            "sd.SPI_CLK": "D3"
+        }
+    }
+}
