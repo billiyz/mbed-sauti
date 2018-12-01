@@ -29,45 +29,46 @@ EventQueue printf_queue;
 static AnalogIn   signal_input(A1);
 
 /* PWM parameters */
-PwmOut pwm_output(PB_4);
-const float SIGNAL_FREQ = 200.0;
-const float DUTY_CYCLE = 0.5;
-const float PERIOD_MS = 1000 * (1.0 / SIGNAL_FREQ);
+static PwmOut pwm_output(PB_4);
+static const float SIGNAL_FREQ = 200.0;
+static const float DUTY_CYCLE = 0.5;
+static const float PERIOD_MS = 1000 * (1.0 / SIGNAL_FREQ);
 
 
-const int  SAMPLING_RATE = 8000;
-const int DURATION_IN_SEC = 4;
+static const int  SAMPLING_RATE = 8000;
+static const int DURATION_IN_SEC = 4;
 
 // Storage
-SDBlockDevice bd(
+static SDBlockDevice bd(
     MBED_CONF_SD_SPI_MOSI,
     MBED_CONF_SD_SPI_MISO,
     MBED_CONF_SD_SPI_CLK,
     MBED_CONF_SD_SPI_CS);
 
-FATFileSystem fs("fs");
-int storage_status = 0;  // 0 -> unmounted , 1 -> mounted
+static FATFileSystem fs("fs");
+static int storage_status = 0;  // 0 -> unmounted , 1 -> mounted
 
 // Buffer to store the samples
-const int NUM_BUFFERS = 2;
-const int BUFFER_SIZE = 1024;
+static const int NUM_BUFFERS = 2;
+static const int BUFFER_SIZE = 1024;
 static int16_t buffer[NUM_BUFFERS][BUFFER_SIZE];
-int16_t *write_buffer;
+static int16_t *write_buffer;
 
 // sampling variables
-int current_buffer = 0;
-int sample_number = 0;
-uint32_t total_sample_number = 0;
-int write_status = 0;
-float sample_value = 0;
-int16_t normalized_sample_value = 0;
+static int current_buffer = 0;
+static int sample_number = 0;
+static uint32_t total_sample_number = 0;
+static int write_status = 0;
+static float sample_value = 0;
+static int16_t normalized_sample_value = 0;
 
 // wav file parameter
-FILE *fp;
+static FILE *fp;
 static wav_file_header_t wav_file_header;
-int file_open = 0;
-int done_recording = 0;
+static int file_open = 0;
+static int done_recording = 0;
 
+// Status LED which blinks on recording
 static DigitalOut led(LED1);
 
 void sample_signal() {
@@ -119,6 +120,7 @@ void check_write_buffer() {
 
 void mount_filesystem() {
   printf_queue.call(printf, "Mounting filesystem ... ");
+
   int err = fs.mount(&bd);
   if (!err) {
     storage_status = 1;
@@ -132,14 +134,14 @@ void mount_filesystem() {
     }
   }
   printf_queue.call(printf, "%s\n", (err ? "Fail :(" : "OK"));
+
   printf_queue.call(printf, "Opening wav file ... ");
-  fp = fopen("/fs/audio_test_3.wav", "wb");
-  // fclose(fp);
+  fp = fopen("/fs/audio_test.wav", "wb");
+
   if (fp) {
     file_open = 1;
   }
   printf_queue.call(printf, "%s\n", (!fp ? "Fail :(" : "OK"));
-  // event_queue.call_in(10 * 1000, fclose, fp);
 }
 
 
@@ -151,7 +153,7 @@ int main() {
   // Set up PWM parameters
   pwm_output.period_ms(PERIOD_MS);
   pwm_output.write(DUTY_CYCLE);
-    
+
   // Set up sampling thread
   Thread sampler_thread(osPriorityRealtime);
   sampler_thread.start(callback(&sample_queue, &EventQueue::dispatch_forever));
@@ -168,7 +170,7 @@ int main() {
   initialize_wav_header(&wav_file_header,
                         SAMPLING_RATE,
                         SAMPLING_RATE * DURATION_IN_SEC);
-  int num_written_objs;
+  int num_written_objs = 0;
   if (fp) {
     num_written_objs = fwrite(&wav_file_header, sizeof(wav_file_header), 1, fp);
   }
@@ -184,10 +186,9 @@ int main() {
   Ticker writer;
   writer.attach_us(write_queue.event(&check_write_buffer),
                    (1000000.0 / SAMPLING_RATE) * (BUFFER_SIZE / 4));
-  
 
   wait(2 * DURATION_IN_SEC);
-  
+
   int err = fclose(fp);
   printf("Closing wave file ... %s\n", (err < 0 ? "Fail :(" : "OK"));
   if (err < 0) {
@@ -198,6 +199,8 @@ int main() {
   printf("Unmounting ... %s\n", (err < 0 ? "Fail :(" : "OK"));
   if (err < 0) {
     error("error: %s (%d)\n", strerror(-err), err);
+  } else {
+    led = 0;
   }
 
   wait(osWaitForever);
