@@ -91,18 +91,8 @@ void sample_signal() {
   } else if (total_sample_number ==
              (MBED_CONF_APP_SAMPLING_RATE * MBED_CONF_APP_DURATION_SEC)) {
     done_recording = 1;
-    fflush(stdout);
     printf_queue.call(printf, "Done recording ... \n");
     total_sample_number++;
-  }
-
-  if (file_open && storage_status && done_recording) {
-    led = 0;
-    file_open = 0;
-  }
-
-  if (!file_open && storage_status && done_recording) {
-    storage_status = 0;
   }
 }
 
@@ -117,7 +107,7 @@ void check_write_buffer() {
     if (num_written_objs != 1) {
       printf_queue.call(printf, "writing error ... ");
     }
-    led = !led;
+    led = !led;  // cause led to flash when recording
   }
 }
 
@@ -147,6 +137,25 @@ void mount_filesystem() {
   printf_queue.call(printf, "%s\n", (!fp ? "Fail :(" : "OK"));
 }
 
+void unmount_filesystem() {
+  int err = fclose(fp);
+  printf_queue.call(printf,
+                    "Closing wave file ... %s\n",
+                    (err < 0 ? "Fail :(" : "OK"));
+  if (err < 0) {
+    error("error: %s (%d)\n", strerror(errno), -errno);
+  }
+
+  err = fs.unmount();
+  printf_queue.call(printf,
+                    "Unmounting ... %s\n",
+                    (err < 0 ? "Fail :(" : "OK"));
+  if (err < 0) {
+    error("error: %s (%d)\n", strerror(-err), err);
+  } else {
+    led = 0;
+  }
+}
 
 
 
@@ -168,7 +177,7 @@ int main() {
   Thread printf_thread(osPriorityNormal, 32 * 1024);
   printf_thread.start(callback(&printf_queue, &EventQueue::dispatch_forever));
 
-  mount_filesystem();
+  mount_filesystem();  // mount sd card and open file
 
   // initialize wav header
   initialize_wav_header(&wav_file_header,
@@ -194,21 +203,11 @@ int main() {
                    (1000000.0 / MBED_CONF_APP_SAMPLING_RATE)
                    * (MBED_CONF_APP_BUFFER_SIZE / 4));
 
-  wait(2 * MBED_CONF_APP_DURATION_SEC);
-
-  int err = fclose(fp);
-  printf("Closing wave file ... %s\n", (err < 0 ? "Fail :(" : "OK"));
-  if (err < 0) {
-    error("error: %s (%d)\n", strerror(errno), -errno);
+  printf_queue.call(printf, "Recording... \n");
+  while (!done_recording) {
+    wait(1);
   }
 
-  err = fs.unmount();
-  printf("Unmounting ... %s\n", (err < 0 ? "Fail :(" : "OK"));
-  if (err < 0) {
-    error("error: %s (%d)\n", strerror(-err), err);
-  } else {
-    led = 0;
-  }
-
+  unmount_filesystem();  // close file and unmount sd card
   wait(osWaitForever);
 }
