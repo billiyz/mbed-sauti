@@ -25,10 +25,14 @@ EventQueue sample_queue;
 EventQueue write_queue;
 EventQueue printf_queue;
 
-// Analog input to simulate the microphone
+// Analog input from microphone or PWM signal
 static AnalogIn   signal_input(A1);
 
-/* PWM parameters */
+// Microphone parameters
+static const float VDD = 3.3;
+static const float VBIAS = 0.67;
+
+// PWM parameters
 static PwmOut pwm_output(PB_4);
 
 
@@ -66,9 +70,14 @@ static DigitalOut led(LED1);
 void sample_signal() {
   if (total_sample_number <
       (MBED_CONF_APP_SAMPLING_RATE * MBED_CONF_APP_DURATION_SEC)) {
-    sample_value = signal_input.read();
-    normalized_sample_value = (int16_t) (sample_value * 32767);
-
+    if (MBED_CONF_APP_MICROPHONE) {
+      sample_value = (signal_input.read() -
+                      (VBIAS / VDD));  // subtract the DC bias
+      normalized_sample_value = (int16_t) (sample_value * 32767);
+    } else {
+      sample_value = signal_input.read();
+      normalized_sample_value = (int16_t) (sample_value * 32767);
+    }
     buffer[current_buffer][sample_number] = normalized_sample_value;
     sample_number++;
     total_sample_number++;
@@ -142,12 +151,13 @@ void mount_filesystem() {
 
 
 int main() {
-  printf("\r--- Record Audio ---- %d \n", MBED_CONF_APP_NUM_BUFFERS);
+  printf("\r--- Record Audio ----  \n");
 
-  // Set up PWM parameters
-  pwm_output.period_ms(1000 * (1.0 / MBED_CONF_APP_PWM_SIGNAL_FREQ));
-  pwm_output.write(MBED_CONF_APP_PWM_DUTY_CYCLE / 100.0);
-
+  // Set up PWM parameters if not using the microphone
+  if (!MBED_CONF_APP_MICROPHONE) {
+    pwm_output.period_ms(1000 * (1.0 / MBED_CONF_APP_PWM_SIGNAL_FREQ));
+    pwm_output.write(MBED_CONF_APP_PWM_DUTY_CYCLE / 100.0);
+  }
   // Set up sampling thread
   Thread sampler_thread(osPriorityRealtime);
   sampler_thread.start(callback(&sample_queue, &EventQueue::dispatch_forever));

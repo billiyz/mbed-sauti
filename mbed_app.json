@@ -1,5 +1,9 @@
 {
     "config": {
+        "microphone": {
+            "help": "When true record from microphone, otherwise from PWM signal",
+            "value": true
+        },
         "sampling-rate": {
             "help": "Audio sampling rate",
             "value": 8000
