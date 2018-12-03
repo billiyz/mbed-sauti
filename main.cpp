@@ -30,13 +30,7 @@ static AnalogIn   signal_input(A1);
 
 /* PWM parameters */
 static PwmOut pwm_output(PB_4);
-static const float SIGNAL_FREQ = 200.0;
-static const float DUTY_CYCLE = 0.5;
-static const float PERIOD_MS = 1000 * (1.0 / SIGNAL_FREQ);
 
-
-static const int  SAMPLING_RATE = 8000;
-static const int DURATION_IN_SEC = 4;
 
 // Storage
 static SDBlockDevice bd(
@@ -48,10 +42,8 @@ static SDBlockDevice bd(
 static FATFileSystem fs("fs");
 static int storage_status = 0;  // 0 -> unmounted , 1 -> mounted
 
-// Buffer to store the samples
-static const int NUM_BUFFERS = 2;
-static const int BUFFER_SIZE = 1024;
-static int16_t buffer[NUM_BUFFERS][BUFFER_SIZE];
+// Ping pong buffer to store the samples
+static int16_t buffer[MBED_CONF_APP_NUM_BUFFERS][MBED_CONF_APP_BUFFER_SIZE];
 static int16_t *write_buffer;
 
 // sampling variables
@@ -72,7 +64,8 @@ static int done_recording = 0;
 static DigitalOut led(LED1);
 
 void sample_signal() {
-  if (total_sample_number < SAMPLING_RATE * DURATION_IN_SEC) {
+  if (total_sample_number <
+      (MBED_CONF_APP_SAMPLING_RATE * MBED_CONF_APP_DURATION_SEC)) {
     sample_value = signal_input.read();
     normalized_sample_value = (int16_t) (sample_value * 32767);
 
@@ -80,13 +73,14 @@ void sample_signal() {
     sample_number++;
     total_sample_number++;
 
-    if (sample_number == BUFFER_SIZE) {
-      sample_number %= BUFFER_SIZE;
+    if (sample_number == MBED_CONF_APP_BUFFER_SIZE) {
+      sample_number %= MBED_CONF_APP_BUFFER_SIZE;
       write_buffer = buffer[current_buffer];
-      current_buffer = (current_buffer + 1) % NUM_BUFFERS;
+      current_buffer = (current_buffer + 1) % MBED_CONF_APP_NUM_BUFFERS;
       write_status = 1;
     }
-  } else if (total_sample_number == (SAMPLING_RATE * DURATION_IN_SEC)) {
+  } else if (total_sample_number ==
+             (MBED_CONF_APP_SAMPLING_RATE * MBED_CONF_APP_DURATION_SEC)) {
     done_recording = 1;
     fflush(stdout);
     printf_queue.call(printf, "Done recording ... \n");
@@ -108,7 +102,7 @@ void check_write_buffer() {
   if (write_status) {
     write_status = 0;
     num_written_objs = fwrite(write_buffer,
-                              sizeof(int16_t) * BUFFER_SIZE,
+                              sizeof(int16_t) * MBED_CONF_APP_BUFFER_SIZE,
                               1,
                               fp);
     if (num_written_objs != 1) {
@@ -148,11 +142,11 @@ void mount_filesystem() {
 
 
 int main() {
-  printf("\r--- Record Audio ---- \n");
+  printf("\r--- Record Audio ---- %d \n", MBED_CONF_APP_NUM_BUFFERS);
 
   // Set up PWM parameters
-  pwm_output.period_ms(PERIOD_MS);
-  pwm_output.write(DUTY_CYCLE);
+  pwm_output.period_ms(1000 * (1.0 / MBED_CONF_APP_PWM_SIGNAL_FREQ));
+  pwm_output.write(MBED_CONF_APP_PWM_DUTY_CYCLE / 100.0);
 
   // Set up sampling thread
   Thread sampler_thread(osPriorityRealtime);
@@ -168,8 +162,9 @@ int main() {
 
   // initialize wav header
   initialize_wav_header(&wav_file_header,
-                        SAMPLING_RATE,
-                        SAMPLING_RATE * DURATION_IN_SEC);
+                        MBED_CONF_APP_SAMPLING_RATE,
+                        (MBED_CONF_APP_SAMPLING_RATE *
+                         MBED_CONF_APP_DURATION_SEC));
   int num_written_objs = 0;
   if (fp) {
     num_written_objs = fwrite(&wav_file_header, sizeof(wav_file_header), 1, fp);
@@ -181,13 +176,15 @@ int main() {
 
   Ticker sampler;
   sampler.attach_us(sample_queue.event(&sample_signal),
-                      (1000000.0 / SAMPLING_RATE));
+                      (1000000.0 / MBED_CONF_APP_SAMPLING_RATE));
 
   Ticker writer;
+  // sample 4 times over the duration of filling a buffer
   writer.attach_us(write_queue.event(&check_write_buffer),
-                   (1000000.0 / SAMPLING_RATE) * (BUFFER_SIZE / 4));
+                   (1000000.0 / MBED_CONF_APP_SAMPLING_RATE)
+                   * (MBED_CONF_APP_BUFFER_SIZE / 4));
 
-  wait(2 * DURATION_IN_SEC);
+  wait(2 * MBED_CONF_APP_DURATION_SEC);
 
   int err = fclose(fp);
   printf("Closing wave file ... %s\n", (err < 0 ? "Fail :(" : "OK"));

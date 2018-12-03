@@ -1,4 +1,30 @@
 {
+    "config": {
+        "sampling-rate": {
+            "help": "Audio sampling rate",
+            "value": 8000
+        },
+        "duration-sec": {
+            "help": "Recording Duration in Seconds",
+            "value": 5
+        },
+        "pwm-signal-freq": {
+            "help": "PWM signal frequency",
+            "value": 200
+        },
+        "pwm-duty-cycle": {
+            "help": "PWM Signal Duty Cycle",
+            "value": 50
+        },
+        "num-buffers": {
+            "help": "number of ping-pong buffers",
+            "value": 2
+        },
+        "buffer-size": {
+            "help": "Size of each buffer",
+            "value": 1024
+        }        
+    },
     "target_overrides": {
         "NUCLEO_F446RE": {
             "platform.stdio-convert-newlines": true,
