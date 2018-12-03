@@ -28,7 +28,7 @@ We create a 50% duty cycle signal at 200Hz. This is sampled at 8kHz and saved to
 [TODO]
 ## Software
 
-The code in this repo relies on the SD card driver `SDBlockDevice.h` to record to the micro SD card. Code from the [mbed-os-example-filesystem](https://github.com/ARMmbed/mbed-os-example-filesystem) was used as a guide. The example can also be useful in ensuring that the SD card is correctly set up.
+The code in this repo relies on the SD card driver `SDBlockDevice` to record to the micro SD card. Code from the [mbed-os-example-filesystem](https://github.com/ARMmbed/mbed-os-example-filesystem) was used as a guide. The example can also be useful in ensuring that the SD card is correctly set up.
 
 In addition it may be useful to format the SD card as shown [here](https://os.mbed.com/users/janjongboom/code/format-sd-card/).
 
