@@ -1,5 +1,5 @@
 # Audio Recording Using The Nucleo F446RE board
-Welcome to *mbed-sauti!* Sauti is the swahili word for sound.
+Welcome to *mbed-sauti!* Sauti is the [Kiswahili](https://en.wikipedia.org/wiki/Swahili_language) word for sound.
 
 This repo contains code to record audio using the Nucleo F446RE board. Audio is obtained using a microphone and recorded to an SD card.
 
@@ -76,6 +76,8 @@ You can view the recorded 200Hz PWM signal in *audio_test.wav* using [Audacity](
 
 ![Audacity screenshot](img/audacity_audio.png)
 
+[Audio sample of PWM signal at 200Hz](audio/pwm.wav)
+
 ### Audio Signal
 Set the *microphone* flag to *true* in `mbed_app.json`.
 A screenshot of an audio signal of the swahili word *moja* is shown below
@@ -85,4 +87,7 @@ A screenshot of an audio signal of the swahili word *moja* is shown below
 A spectrogram of the same signal clearly shows the two syllables and the [formants](https://en.wikipedia.org/wiki/Formant).
 
 ![Audacity screenshot](img/moja_spectrogram.png)
+
+[Moja](audio/moja.wav)
+
 
